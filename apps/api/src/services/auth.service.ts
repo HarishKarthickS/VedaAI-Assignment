@@ -29,11 +29,10 @@ function hashToken(token: string) {
 function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
-    sameSite: "none" as const,
     secure: true,
-    domain: env.COOKIE_DOMAIN || undefined,
-    maxAge,
+    sameSite: "none" as const,
     path: "/",
+    maxAge,
   };
 }
 
@@ -46,15 +45,15 @@ function issueAccessToken(claims: SessionClaims) {
 }
 
 async function issueSession(response: Response, claims: SessionClaims) {
-  const refreshToken = jwt.sign(claims, env.JWT_REFRESH_SECRET, { expiresIn: "7d" });
+  const refreshToken = jwt.sign(claims, env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
   await RefreshSession.create({
     userId: claims.userId,
     tokenHash: hashToken(refreshToken),
-    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
 
-  response.cookie(accessCookie, issueAccessToken(claims), cookieOptions(15 * 60 * 1000));
-  response.cookie(refreshCookie, refreshToken, cookieOptions(7 * 24 * 60 * 60 * 1000));
+  response.cookie(accessCookie, issueAccessToken(claims), cookieOptions(7 * 24 * 60 * 60 * 1000));
+  response.cookie(refreshCookie, refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000));
 }
 
 async function sessionView(userId: string, workspaceId: string, role: WorkspaceRole) {
