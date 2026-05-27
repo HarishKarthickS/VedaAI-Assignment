@@ -7,7 +7,7 @@ export function setCookie(name: string, value: string, days: number) {
 export function getCookie(name: string): string | undefined {
   if (typeof document === "undefined") return undefined;
   const match = document.cookie.match(new RegExp(`(^| )${name}=([^;]+)`));
-  return match ? decodeURIComponent(match[2]) : undefined;
+  return match && match[2] ? decodeURIComponent(match[2]) : undefined;
 }
 
 export function deleteCookie(name: string) {
