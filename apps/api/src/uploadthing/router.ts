@@ -2,7 +2,7 @@ import { createUploadthing, type FileRouter } from "uploadthing/express";
 import { UploadThingError } from "uploadthing/server";
 import { z } from "zod";
 import { env } from "../config/env.js";
-import { authCookies, verifyAccessToken } from "../services/auth.service.js";
+import { verifyAccessToken } from "../services/auth.service.js";
 import { SourceDocument } from "../models/index.js";
 import { extractionQueue } from "../queues/index.js";
 import { deletePrivateFile } from "../services/file.service.js";
@@ -26,7 +26,7 @@ export const uploadRouter: FileRouter = {
         throw new UploadThingError("File uploads are not configured. Add UPLOADTHING_TOKEN to .env.");
       }
 
-      const token = req.cookies?.[authCookies.accessCookie] as string | undefined;
+      const token = req.cookies?.["veda_access"] as string | undefined;
       if (!token) throw new UploadThingError("Please sign in before uploading.");
       const claims = verifyAccessToken(token);
       return { sourceDraftId: input.sourceDraftId, userId: claims.userId, workspaceId: claims.workspaceId };

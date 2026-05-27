@@ -1,7 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import type { Response } from "express";
 import {
   loginSchema,
   signupSchema,
@@ -44,7 +43,7 @@ function issueAccessToken(claims: SessionClaims) {
   return jwt.sign(claims, env.JWT_ACCESS_SECRET, { expiresIn: "7d" });
 }
 
-async function issueSession(response: Response, claims: SessionClaims) {
+async function issueSession(claims: SessionClaims) {
   const refreshToken = jwt.sign(claims, env.JWT_REFRESH_SECRET, { expiresIn: "30d" });
   await RefreshSession.create({
     userId: claims.userId,
@@ -52,8 +51,10 @@ async function issueSession(response: Response, claims: SessionClaims) {
     expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
   });
 
-  response.cookie(accessCookie, issueAccessToken(claims), cookieOptions(7 * 24 * 60 * 60 * 1000));
-  response.cookie(refreshCookie, refreshToken, cookieOptions(30 * 24 * 60 * 60 * 1000));
+  return {
+    accessToken: issueAccessToken(claims),
+    refreshToken,
+  };
 }
 
 async function sessionView(userId: string, workspaceId: string, role: WorkspaceRole) {
@@ -65,7 +66,7 @@ async function sessionView(userId: string, workspaceId: string, role: WorkspaceR
   return { user, workspace, role };
 }
 
-export async function signup(input: unknown, response: Response) {
+export async function signup(input: unknown) {
   const details = signupSchema.parse(input);
   if (await User.exists({ email: details.email })) {
     throw new ApiError(409, "An account with that email already exists.");
@@ -111,11 +112,11 @@ export async function signup(input: unknown, response: Response) {
 
   if (!userId || !workspaceId) throw new ApiError(500, "Account creation could not be completed.");
   const claims: SessionClaims = { userId, workspaceId, role: "ADMIN" };
-  await issueSession(response, claims);
-  return sessionView(claims.userId, claims.workspaceId, claims.role);
+  const tokens = await issueSession(claims);
+  return { ...(await sessionView(claims.userId, claims.workspaceId, claims.role)), tokens };
 }
 
-export async function login(input: unknown, response: Response) {
+export async function login(input: unknown) {
   const details = loginSchema.parse(input);
   const user = await User.findOne({ email: details.email });
   if (!user || !(await bcrypt.compare(details.password, user.passwordHash))) {
@@ -129,11 +130,11 @@ export async function login(input: unknown, response: Response) {
     workspaceId: String(membership.workspaceId),
     role: membership.role as WorkspaceRole,
   };
-  await issueSession(response, claims);
-  return sessionView(claims.userId, claims.workspaceId, claims.role);
+  const tokens = await issueSession(claims);
+  return { ...(await sessionView(claims.userId, claims.workspaceId, claims.role)), tokens };
 }
 
-export async function refreshSession(refreshToken: string | undefined, response: Response) {
+export async function refreshSession(refreshToken: string | undefined) {
   if (!refreshToken) throw new ApiError(401, "Please sign in.");
   const claims = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET) as SessionClaims;
   const stored = await RefreshSession.findOne({ tokenHash: hashToken(refreshToken), revokedAt: null });
@@ -141,16 +142,14 @@ export async function refreshSession(refreshToken: string | undefined, response:
 
   stored.revokedAt = new Date();
   await stored.save();
-  await issueSession(response, claims);
-  return sessionView(claims.userId, claims.workspaceId, claims.role);
+  const tokens = await issueSession(claims);
+  return { ...(await sessionView(claims.userId, claims.workspaceId, claims.role)), tokens };
 }
 
-export async function logout(refreshToken: string | undefined, response: Response) {
+export async function logout(refreshToken: string | undefined) {
   if (refreshToken) {
     await RefreshSession.updateOne({ tokenHash: hashToken(refreshToken) }, { revokedAt: new Date() });
   }
-  response.clearCookie(accessCookie, cookieOptions(0));
-  response.clearCookie(refreshCookie, cookieOptions(0));
 }
 
 export async function createInvite(claims: SessionClaims, input: { email?: string }) {
@@ -167,7 +166,7 @@ export async function createInvite(claims: SessionClaims, input: { email?: strin
   return { id: invite.id, token, expiresAt: invite.expiresAt };
 }
 
-export async function acceptInvite(token: string, input: unknown, response: Response) {
+export async function acceptInvite(token: string, input: unknown) {
   const details = signupSchema.omit({ schoolName: true, city: true }).parse(input);
   const invite = await Invite.findOne({ tokenHash: hashToken(token), acceptedAt: null });
   if (!invite || invite.expiresAt < new Date()) throw new ApiError(404, "This invitation has expired.");
@@ -190,8 +189,8 @@ export async function acceptInvite(token: string, input: unknown, response: Resp
     workspaceId: String(invite.workspaceId),
     role: invite.role as WorkspaceRole,
   };
-  await issueSession(response, claims);
-  return sessionView(claims.userId, claims.workspaceId, claims.role);
+  const tokens = await issueSession(claims);
+  return { ...(await sessionView(claims.userId, claims.workspaceId, claims.role)), tokens };
 }
 
 export async function listMembers(workspaceId: string) {
@@ -224,4 +223,3 @@ export async function updateWorkspace(claims: SessionClaims, input: unknown) {
   return sessionView(claims.userId, claims.workspaceId, claims.role);
 }
 
-export const authCookies = { accessCookie, refreshCookie };

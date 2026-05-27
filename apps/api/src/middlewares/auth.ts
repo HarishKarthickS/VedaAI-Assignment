@@ -1,9 +1,9 @@
 import type { RequestHandler } from "express";
-import { authCookies, verifyAccessToken } from "../services/auth.service.js";
+import { verifyAccessToken } from "../services/auth.service.js";
 import { ApiError } from "../utils/http.js";
 
 export const requireAuth: RequestHandler = (request, _response, next) => {
-  const token = request.cookies?.[authCookies.accessCookie] as string | undefined;
+  const token = request.cookies?.["veda_access"] as string | undefined;
   if (!token) {
     next(new ApiError(401, "Please sign in."));
     return;

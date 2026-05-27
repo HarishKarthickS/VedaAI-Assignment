@@ -4,7 +4,7 @@ import { parse } from "cookie";
 import { Server } from "socket.io";
 import { env } from "../config/env.js";
 import { createRedisConnection } from "../config/redis.js";
-import { authCookies, verifyAccessToken } from "../services/auth.service.js";
+import { verifyAccessToken } from "../services/auth.service.js";
 import { Assignment } from "../models/index.js";
 
 export function createSocketServer(server: HttpServer) {
@@ -18,7 +18,7 @@ export function createSocketServer(server: HttpServer) {
   io.use((socket, next) => {
     try {
       const cookies = parse(socket.handshake.headers.cookie || "");
-      const token = cookies[authCookies.accessCookie];
+      const token = cookies["veda_access"];
       if (!token) return next(new Error("Unauthorized"));
       socket.data.auth = verifyAccessToken(token);
       next();

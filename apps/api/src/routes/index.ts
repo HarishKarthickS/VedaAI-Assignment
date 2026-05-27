@@ -4,7 +4,6 @@ import { inviteSchema, pdfTemplateSchema, pdfVariantSchema } from "@veda/contrac
 import { requireAuth } from "../middlewares/auth.js";
 import {
   acceptInvite,
-  authCookies,
   createInvite,
   listMembers,
   login,
@@ -37,21 +36,21 @@ function routeParam(request: { params: Record<string, string | string[] | undefi
 }
 
 apiRouter.post("/auth/signup", asyncHandler(async (request, response) => {
-  response.status(201).json(await signup(request.body, response));
+  response.status(201).json(await signup(request.body));
 }));
 apiRouter.post("/auth/login", asyncHandler(async (request, response) => {
-  response.json(await login(request.body, response));
+  response.json(await login(request.body));
 }));
 apiRouter.post("/auth/refresh", asyncHandler(async (request, response) => {
-  response.json(await refreshSession(request.cookies?.[authCookies.refreshCookie], response));
+  response.json(await refreshSession(request.cookies?.["veda_refresh"]));
 }));
 apiRouter.post("/auth/logout", asyncHandler(async (request, response) => {
-  await logout(request.cookies?.[authCookies.refreshCookie], response);
+  await logout(request.cookies?.["veda_refresh"]);
   response.status(204).end();
 }));
 
 apiRouter.post("/invites/:token/accept", asyncHandler(async (request, response) => {
-  response.status(201).json(await acceptInvite(routeParam(request, "token"), request.body, response));
+  response.status(201).json(await acceptInvite(routeParam(request, "token"), request.body));
 }));
 
 apiRouter.use(requireAuth);
