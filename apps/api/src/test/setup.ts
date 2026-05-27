@@ -1,0 +1,10 @@
+process.env.NODE_ENV = "test";
+process.env.PORT = "4000";
+process.env.WEB_ORIGIN = "http://localhost:3000";
+process.env.MONGODB_URI = "mongodb://localhost:27017/vedaai-test";
+process.env.REDIS_URL = "redis://localhost:6379";
+process.env.JWT_ACCESS_SECRET = "test-access-secret-longer-than-24-characters";
+process.env.JWT_REFRESH_SECRET = "test-refresh-secret-longer-than-24-characters";
+process.env.OPENROUTER_API_KEY = "test-openrouter-key";
+process.env.OPENROUTER_MODEL = "test/model";
+process.env.UPLOADTHING_TOKEN = "test-uploadthing-token";

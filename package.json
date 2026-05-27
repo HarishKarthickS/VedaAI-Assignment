@@ -1,0 +1,25 @@
+{
+  "name": "vedaai",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @veda/contracts && npm run build -w @veda/api && npm run build -w @veda/web",
+    "dev": "concurrently \"npm run dev -w @veda/api\" \"npm run dev -w @veda/web\"",
+    "dev:api": "npm run dev -w @veda/api",
+    "dev:web": "npm run dev -w @veda/web",
+    "worker": "npm run worker -w @veda/api",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.2",
+    "typescript": "^5.7.3"
+  },
+  "engines": {
+    "node": ">=20.11.0"
+  }
+}
