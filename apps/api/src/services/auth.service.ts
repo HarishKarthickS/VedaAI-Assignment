@@ -29,8 +29,8 @@ function hashToken(token: string) {
 function cookieOptions(maxAge: number) {
   return {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: env.NODE_ENV === "production",
+    sameSite: "none" as const,
+    secure: true,
     domain: env.COOKIE_DOMAIN || undefined,
     maxAge,
     path: "/",
