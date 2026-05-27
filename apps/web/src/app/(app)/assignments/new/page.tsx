@@ -17,7 +17,7 @@ import { z } from "zod";
 import { NumberStepper } from "@/components/number-stepper";
 import { CustomSelect } from "@/components/custom-select";
 import { apiRequest } from "@/lib/api";
-import { createStudyMaterialUpload } from "@/lib/uploadthing";
+import { uploadFiles } from "@/lib/uploadthing";
 import { defaultAssignment, useAssignmentDraft } from "@/store/assignment-draft";
 
 const formSchema = createAssignmentSchema.omit({ dueDate: true }).extend({
@@ -144,8 +144,10 @@ export default function CreateAssignmentPage() {
     setIsUploading(true);
 
     try {
-      const upload = await createStudyMaterialUpload(file, sourceDraftId);
-      const uploaded = await upload.done();
+      const uploaded = await uploadFiles("studyMaterial", {
+        files: [file],
+        input: { sourceDraftId },
+      } as never);
       if (!uploaded.length) throw new Error("Study material could not be uploaded.");
       setMaterialUpload({
         sourceDraftId,
