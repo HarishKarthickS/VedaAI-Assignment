@@ -3,7 +3,8 @@ import { verifyAccessToken } from "../services/auth.service.js";
 import { ApiError } from "../utils/http.js";
 
 export const requireAuth: RequestHandler = (request, _response, next) => {
-  const token = request.cookies?.["veda_access"] as string | undefined;
+  const token = (request.cookies?.["veda_access"] as string | undefined) ||
+                request.headers.authorization?.replace(/^Bearer\s/i, "");
   if (!token) {
     next(new ApiError(401, "Please sign in."));
     return;

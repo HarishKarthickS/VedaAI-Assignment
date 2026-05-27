@@ -26,7 +26,8 @@ export const uploadRouter: FileRouter = {
         throw new UploadThingError("File uploads are not configured. Add UPLOADTHING_TOKEN to .env.");
       }
 
-      const token = req.cookies?.["veda_access"] as string | undefined;
+      const token = (req.cookies?.["veda_access"] as string | undefined) ||
+                    req.headers.authorization?.replace(/^Bearer\s/i, "");
       if (!token) throw new UploadThingError("Please sign in before uploading.");
       const claims = verifyAccessToken(token);
       return { sourceDraftId: input.sourceDraftId, userId: claims.userId, workspaceId: claims.workspaceId };

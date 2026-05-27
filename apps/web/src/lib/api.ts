@@ -1,13 +1,15 @@
-import { deleteCookie, setCookie } from "./cookies";
+import { deleteCookie, getCookie, setCookie } from "./cookies";
 
 export const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
 export async function apiRequest<T>(path: string, options?: RequestInit, canRefresh = true): Promise<T> {
+  const token = getCookie("veda_access");
   const response = await fetch(`${apiUrl}/api${path}`, {
     ...options,
     credentials: "include",
     headers: {
       ...(options?.body ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...options?.headers,
     },
   });
