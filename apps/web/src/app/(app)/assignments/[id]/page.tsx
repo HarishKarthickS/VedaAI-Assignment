@@ -102,7 +102,10 @@ export default function AssessmentPaperPage() {
       const exports = await apiRequest<Array<{ _id: string; status: string }>>(`/assignments/${id}/exports`);
       if (exports.find((item) => item._id === artifact._id)?.status === "completed") {
         const signed = await apiRequest<{ ufsUrl: string }>(`/assignments/${id}/exports/${artifact._id}/access`);
-        window.open(signed.ufsUrl, "_blank", "noopener,noreferrer");
+        const newWindow = window.open(signed.ufsUrl, "_blank", "noopener,noreferrer");
+        if (!newWindow) {
+          alert("Pop-up blocked. Please allow pop-ups and redirects for this site to download the PDF.");
+        }
         return;
       }
       await new Promise((resolve) => setTimeout(resolve, 1000));
