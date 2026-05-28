@@ -269,7 +269,7 @@ export async function buildAndStorePdf(exportId: string) {
     const bytes = await createPdfBuffer(document);
     const fileName = `${assignment.name.replace(/\W+/g, "-").toLowerCase()}-${artifact.variant}.pdf`;
     const upload = await uploadPrivateFile(
-      new UTFile([new Uint8Array([...bytes])], fileName, {
+      new UTFile([bytes as any], fileName, {
         type: "application/pdf",
         customId: `${artifact.id}:${artifact.variant}`,
       }),
@@ -278,7 +278,9 @@ export async function buildAndStorePdf(exportId: string) {
         contentDisposition: "attachment",
       },
     );
-    if (upload.error || !upload.data) throw new ApiError(502, "PDF could not be stored.");
+    if (upload.error || !upload.data) {
+      throw new ApiError(502, `PDF could not be stored: ${upload.error?.message || "Unknown storage error"}`);
+    }
     artifact.status = "completed";
     artifact.error = undefined;
     artifact.fileKey = upload.data.key;
