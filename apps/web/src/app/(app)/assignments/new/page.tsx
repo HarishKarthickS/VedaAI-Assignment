@@ -133,40 +133,66 @@ export default function CreateAssignmentPage() {
 
   async function uploadStudyMaterial(file: File) {
     const sourceDraftId = materialUpload?.sourceDraftId || crypto.randomUUID();
+
     setSubmitError("");
+
     setMaterialUpload({
       sourceDraftId,
       fileName: file.name,
       fileSize: file.size,
       status: "uploading",
     });
+
     setActivity("Uploading study material in the background");
+
     setIsUploading(true);
 
     try {
+      console.log("UPLOAD START");
+
       const uploaded = await uploadFiles("studyMaterial", {
         files: [file],
         input: { sourceDraftId },
       } as never);
-      if (!uploaded.length) throw new Error("Study material could not be uploaded.");
+
+      console.log("UPLOAD RESPONSE", uploaded);
+
+      if (!uploaded?.length) {
+        throw new Error("Study material could not be uploaded.");
+      }
+
+      const uploadedFile = uploaded[0];
+
+      // Don't depend on serverData immediately
       setMaterialUpload({
         sourceDraftId,
-        sourceDocumentId: uploaded[0]?.serverData?.sourceDocumentId,
+        sourceDocumentId: uploadedFile?.serverData?.sourceDocumentId,
         fileName: file.name,
         fileSize: file.size,
         status: "uploaded",
       });
+
       setActivity("");
     } catch (problem) {
+      console.error("UPLOAD FAILED", problem);
+
       setMaterialUpload({
         sourceDraftId,
         fileName: file.name,
         fileSize: file.size,
         status: "failed",
       });
+
       setActivity("");
-      setSubmitError(problem instanceof Error ? problem.message : "Study material could not be uploaded.");
+
+      setSubmitError(
+        problem instanceof Error
+          ? problem.message
+          : "Study material could not be uploaded."
+      );
     } finally {
+      console.log("UPLOAD FINISHED");
+
       setIsUploading(false);
     }
   }
@@ -192,6 +218,11 @@ export default function CreateAssignmentPage() {
   }
 
   const submit = form.handleSubmit(async (values) => {
+    if (isUploading) {
+      setSubmitError("Please wait for the study material to finish uploading before submitting.");
+      return;
+    }
+
     setSubmitError("");
     try {
       setActivity("Creating assessment");
@@ -451,8 +482,8 @@ export default function CreateAssignmentPage() {
           {step === 1 ? (
             <Button type="button" onClick={saveAndContinue}>Next <ArrowRight size={17} /></Button>
           ) : (
-            <Button type="submit" disabled={form.formState.isSubmitting || isUploading}>
-              {form.formState.isSubmitting || isUploading ? "Preparing..." : "Generate Assessment"} <ArrowRight size={17} />
+            <Button type="submit" disabled={form.formState.isSubmitting}>
+              {form.formState.isSubmitting ? "Preparing..." : "Generate Assessment"} <ArrowRight size={17} />
             </Button>
           )}
         </div>
