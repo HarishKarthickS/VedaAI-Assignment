@@ -150,13 +150,32 @@ export default function CreateAssignmentPage() {
     try {
       console.log("UPLOAD START");
 
-      const uploaded = await uploadFiles("studyMaterial", {
-        files: [file],
-        input: { sourceDraftId },
-        onUploadProgress: ({ file, progress }: { file: string; progress: number }) => {
-          console.log(`[Upload Progress] ${file} - ${progress}%`);
-        },
-      } as never);
+      const originalFetch = globalThis.fetch;
+      globalThis.fetch = async (input, init) => {
+        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
+        console.log(`[Global Fetch] -> ${init?.method || "GET"} ${url}`);
+        try {
+          const res = await originalFetch(input, init);
+          console.log(`[Global Fetch] <- ${res.status} (${url})`);
+          return res;
+        } catch (e) {
+          console.error(`[Global Fetch] X- BLOCKED/FAILED (${url})`, e);
+          throw e;
+        }
+      };
+
+      let uploaded;
+      try {
+        uploaded = await uploadFiles("studyMaterial", {
+          files: [file],
+          input: { sourceDraftId },
+          onUploadProgress: ({ file, progress }: { file: string; progress: number }) => {
+            console.log(`[Upload Progress] ${file} - ${progress}%`);
+          },
+        } as never);
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
 
       console.log("UPLOAD RESPONSE", uploaded);
 
