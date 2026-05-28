@@ -41,6 +41,7 @@ export function createApp() {
   app.use(helmet());
   app.use(cors({ origin: env.WEB_ORIGIN, credentials: true }));
   app.use(cookieParser());
+  app.use("/api/uploadthing", createRouteHandler({ router: uploadRouter }));
   app.use(express.json({ limit: "1mb" }));
   app.use(rateLimit({ windowMs: 60_000, limit: 100, standardHeaders: "draft-7" }));
 
@@ -50,7 +51,6 @@ export function createApp() {
     response.json({ service: "vedaai-api", status: "ready" });
   });
   app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-  app.use("/api/uploadthing", createRouteHandler({ router: uploadRouter }));
   app.use("/api", apiRouter);
   app.use(errorHandler);
   return app;
