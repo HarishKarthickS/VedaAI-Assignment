@@ -56,8 +56,16 @@ function normalizeMcq(question: Question): Question {
     options = answerOption ? [...firstOptions, answerOption] : firstOptions;
   }
 
+  // Pad to exactly 4 options if the AI generated fewer
+  const fallbacks = ["None of the above", "All of the above", "Cannot be determined", "Insufficient information"];
+  while (options.length < 4) {
+    const nextFallback = fallbacks.find((opt) => !options.some((o) => normalizeAnswer(o) === normalizeAnswer(opt))) || `Option ${options.length + 1}`;
+    options.push(nextFallback);
+  }
+
   const matchedOption = options.find((option) => normalizeAnswer(option) === normalizeAnswer(answerKey));
   if (matchedOption) answerKey = matchedOption;
+
 
   return {
     ...question,

@@ -188,7 +188,22 @@ async function callOpenRouter(body: ProviderRequest, mode: string) {
 async function parseStructuredBody<T>(response: ProviderResponse, schema: ZodType<T, any, any>) {
   const content = response.result?.choices?.[0]?.message?.content;
   if (!content) throw new ApiError(502, "AI provider returned an empty assessment.");
-  const parsedJson = typeof content === "string" ? (JSON.parse(content) as unknown) : content;
+
+  let cleanContent = content;
+  if (typeof cleanContent === "string") {
+    let strContent = cleanContent.trim();
+    const match = strContent.match(/^```(?:json)?\s*([\s\S]*?)```$/);
+    if (match) strContent = match[1]!;
+    else {
+      strContent = strContent.replace(/^```(?:json)?\s*/, "").replace(/```$/, "");
+    }
+    // Replace unescaped control characters (like literal newlines inside strings)
+    // with spaces so JSON.parse does not fail. Escaped \n are unaffected.
+    strContent = strContent.replace(/[\x00-\x1F]+/g, " ");
+    cleanContent = strContent;
+  }
+
+  const parsedJson = typeof cleanContent === "string" ? (JSON.parse(cleanContent) as unknown) : cleanContent;
   return schema.parse(parsedJson);
 }
 
@@ -220,6 +235,8 @@ async function parseOrRepairStructuredBody<T>(
             content: [
               "Return a corrected response as valid JSON only.",
               "It must match this JSON schema exactly.",
+              "CRITICAL: Use double quotes for all property names and string values. Do not use single quotes.",
+              "CRITICAL: Do not include unescaped newlines or control characters inside string values. Use \\n for newlines.",
               JSON.stringify(zodToJsonSchema(schema, { $refStrategy: "none" })),
             ].join("\n"),
           },
