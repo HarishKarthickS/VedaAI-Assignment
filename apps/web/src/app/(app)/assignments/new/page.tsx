@@ -169,6 +169,7 @@ export default function CreateAssignmentPage() {
         uploaded = await uploadFiles("studyMaterial", {
           files: [file],
           input: { sourceDraftId },
+          skipPolling: true,
           onUploadProgress: ({ file, progress }: { file: string; progress: number }) => {
             console.log(`[Upload Progress] ${file} - ${progress}%`);
           },
