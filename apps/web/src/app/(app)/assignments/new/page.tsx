@@ -148,47 +148,37 @@ export default function CreateAssignmentPage() {
     setIsUploading(true);
 
     try {
-      console.log("UPLOAD START");
-
-      const originalFetch = globalThis.fetch;
-      globalThis.fetch = async (input, init) => {
-        const url = typeof input === "string" ? input : input instanceof URL ? input.toString() : input.url;
-        console.log(`[Global Fetch] -> ${init?.method || "GET"} ${url}`);
-        try {
-          const res = await originalFetch(input, init);
-          console.log(`[Global Fetch] <- ${res.status} (${url})`);
-          return res;
-        } catch (e) {
-          console.error(`[Global Fetch] X- BLOCKED/FAILED (${url})`, e);
-          throw e;
+      // Poll our own backend to detect when the UploadThing webhook has fired and
+      // created the SourceDocument. This is more reliable than waiting on the
+      // browser's CDN response (which can hang indefinitely on mobile/slow networks).
+      async function pollForSourceDocument(draftId: string): Promise<{ _id: string }> {
+        for (let attempt = 0; attempt < 60; attempt++) {
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          const doc = await apiRequest<{ _id: string } | null>(`/source-documents/pending/${draftId}`);
+          if (doc?._id) return doc;
         }
-      };
-
-      let uploaded;
-      try {
-        uploaded = await uploadFiles("studyMaterial", {
-          files: [file],
-          input: { sourceDraftId },
-          onUploadProgress: ({ file, progress }: { file: string; progress: number }) => {
-            console.log(`[Upload Progress] ${file} - ${progress}%`);
-          },
-        } as never);
-      } finally {
-        globalThis.fetch = originalFetch;
+        throw new Error("Upload confirmation timed out. Please try again.");
       }
 
-      console.log("UPLOAD RESPONSE", uploaded);
+      // Fire the upload with skipPolling so it doesn't hang waiting for the CDN
+      // response — the webhook already notified our backend.
+      const uploadPromise = uploadFiles("studyMaterial", {
+        files: [file],
+        input: { sourceDraftId },
+        skipPolling: true,
+        onUploadProgress: ({ file, progress }: { file: string; progress: number }) => {
+          console.log(`[Upload Progress] ${file} - ${progress}%`);
+        },
+      } as never);
 
-      if (!uploaded?.length) {
-        throw new Error("Study material could not be uploaded.");
-      }
+      // Race: whichever resolves first (upload client response OR our backend poll)
+      await Promise.race([
+        uploadPromise,
+        pollForSourceDocument(sourceDraftId),
+      ]);
 
-      const uploadedFile = uploaded[0];
-
-      // Don't depend on serverData immediately
       setMaterialUpload({
         sourceDraftId,
-        sourceDocumentId: uploadedFile?.serverData?.sourceDocumentId,
         fileName: file.name,
         fileSize: file.size,
         status: "uploaded",
@@ -213,8 +203,6 @@ export default function CreateAssignmentPage() {
           : "Study material could not be uploaded."
       );
     } finally {
-      console.log("UPLOAD FINISHED");
-
       setIsUploading(false);
     }
   }

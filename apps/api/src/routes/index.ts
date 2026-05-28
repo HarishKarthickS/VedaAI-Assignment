@@ -143,6 +143,17 @@ apiRouter.get("/assignments/:assignmentId/source", asyncHandler(async (request, 
   }).select("-extractedText");
   response.json(source);
 }));
+// Poll endpoint: checks whether the UploadThing webhook has already created a SourceDocument
+// for a given draft upload (identified by sourceDraftId). The frontend uses this to avoid
+// waiting on the browser's CDN response which can hang on mobile/slow networks.
+apiRouter.get("/source-documents/pending/:draftId", asyncHandler(async (request, response) => {
+  const source = await SourceDocument.findOne({
+    sourceDraftId: routeParam(request, "draftId"),
+    workspaceId: request.auth!.workspaceId,
+    assignmentId: { $exists: false },
+  }).select("_id sourceDraftId fileName fileSize extractionStatus").lean();
+  response.json(source ?? null);
+}));
 apiRouter.get("/files/:fileId/access", asyncHandler(async (request, response) => {
   response.json(await issueSourceFileAccess(routeParam(request, "fileId"), request.auth!.workspaceId));
 }));
