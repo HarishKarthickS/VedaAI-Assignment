@@ -91,12 +91,22 @@ const symbolMap: Record<string, string> = {
   "\u201d": "\"",
   "\u00d7": "x",
   "\u00f7": "/",
+  "\u221a": "sqrt ",
+  "\u2264": "<=",
+  "\u2265": ">=",
+  "\u2248": "~=",
+  "\u2260": "!=",
+  "\u00b0": " deg",
+  "\u221e": "infinity",
+  "\u2192": "->",
+  "\u2190": "<-",
+  "\u2044": "/",
 };
 
 function pdfText(value: unknown) {
   return String(value || "")
     .replace(/[\u0000-\u001f\u007f-\u009f]/g, " ")
-    .replace(/[αβγδθλμπσφωΔΩ²³⁴⁵⁶⁷⁸⁹⁰⁻−‐‑‒–—‘’“”×÷]/g, (match) => symbolMap[match] || match)
+    .replace(/[αβγδθλμπσφωΔΩ²³⁴⁵⁶⁷⁸⁹⁰⁻−‐‑‒–—‘’“”×÷√≤≥≈≠°∞→←⁄]/g, (match) => symbolMap[match] || match)
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -215,51 +225,21 @@ export async function buildAndStorePdf(exportId: string) {
         { text: pdfText(assignment.name), style: "subtitle", margin: [0, 4, 0, 4] },
         { text: `${pdfText(assignment.subject)} | ${pdfText(assignment.grade)}`, alignment: "center", margin: [0, 0, 0, 14] },
         {
-          table: {
-            widths: ["*", "*"],
-            body: [
-              [
-                { text: `Time Allowed: ${assignment.timeLimit} minutes`, style: "metadata", border: [true, true, true, true] },
-                { text: `Maximum Marks: ${assignment.totalMarks}`, alignment: "right", style: "metadata", border: [true, true, true, true] },
-              ],
-            ],
-          },
-          layout: {
-            hLineColor: () => "#d6d6d6",
-            vLineColor: () => "#d6d6d6",
-            paddingLeft: () => 8,
-            paddingRight: () => 8,
-            paddingTop: () => 5,
-            paddingBottom: () => 5,
-          },
+          columns: [
+            { text: `Time Allowed: ${assignment.timeLimit} minutes`, style: "metadata", alignment: "left" },
+            { text: `Maximum Marks: ${assignment.totalMarks}`, style: "metadata", alignment: "right" },
+          ],
+          margin: [0, 8, 0, 16],
         },
-        {
-          canvas: [{ type: "line", x1: 0, y1: 0, x2: 507, y2: 0, lineWidth: 0.7, lineColor: "#777777" }],
-          margin: [0, 14, 0, 12],
-        },
+        { text: "All questions are compulsory unless stated otherwise.", style: "metadata", margin: [0, 0, 0, 16] },
         ...(teacherCopy
-          ? [{ text: "Answer Key", style: "subtitle", margin: [0, 0, 0, 4] }]
+          ? [{ text: "Answer Key", style: "subtitle", margin: [0, 0, 0, 14] }]
           : [
               {
-                table: {
-                  widths: ["*", 150, 130],
-                  body: [
-                    [
-                      { text: "Name: ______________________________", border: [true, true, true, true] },
-                      { text: "Roll No: ______________", border: [true, true, true, true] },
-                      { text: "Section: __________", border: [true, true, true, true] },
-                    ],
-                  ],
-                },
-                layout: {
-                  hLineColor: () => "#d6d6d6",
-                  vLineColor: () => "#d6d6d6",
-                  paddingLeft: () => 8,
-                  paddingRight: () => 8,
-                  paddingTop: () => 6,
-                  paddingBottom: () => 6,
-                },
-                margin: [0, 0, 0, 12],
+                text: `Name: ________________________________\nRoll Number: _________________________\nClass: ${pdfText(assignment.grade)}   Section: ___________________`,
+                style: "metadata",
+                lineHeight: 1.6,
+                margin: [0, 0, 0, 20],
               },
             ]),
         ...sectionContent,
